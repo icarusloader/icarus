@@ -16,7 +16,7 @@ type Hooks struct {
 
 type Config struct {
 	Enabled []string // `kdl:"enabled,args"`
-	Paths   map[string]string
+	Flags   map[string]map[string]any
 }
 
 func ConfigFromKDL(r io.Reader) (*Config, error) {
@@ -25,7 +25,7 @@ func ConfigFromKDL(r io.Reader) (*Config, error) {
 		return nil, err
 	}
 	c := &Config{
-		Paths: map[string]string{},
+		Flags: map[string]map[string]any{},
 	}
 	for _, node := range doc.Nodes {
 		name := node.Name()
@@ -34,9 +34,15 @@ func ConfigFromKDL(r io.Reader) (*Config, error) {
 			for _, cNode := range node.Children().Nodes {
 				c.Enabled = append(c.Enabled, cNode.Name())
 			}
-		case "paths":
+		case "flags":
 			for _, cNode := range node.Children().Nodes {
-				c.Paths[cNode.Name()] = cNode.Arg(0).String()
+				for _, ccNode := range cNode.Children().Nodes {
+					if ccNode.Arg(0).Kind() == kdl.Bool {
+						c.Flags[cNode.Name()][ccNode.Name()] = ccNode.Arg(0).Bool()
+					} else if ccNode.Arg(0).Kind() == kdl.String {
+						c.Flags[cNode.Name()][ccNode.Name()] = ccNode.Arg(0).String()
+					}
+				}
 			}
 		}
 	}
@@ -48,13 +54,20 @@ func (c *Config) ToKDL(w io.Writer) error {
 	for _, m := range c.Enabled {
 		e.AddChild(kdl.NewNode(m))
 	}
-	p := kdl.NewNode("paths")
-	for k, v := range c.Paths {
-		node := kdl.NewNode(k)
-		node.AddArgument(kdl.NewValue(v))
-		p.AddChild(node)
+	f := kdl.NewNode("flags")
+	for k, v := range c.Flags {
+		pNode := kdl.NewNode(k)
+		for ck, cv := range v {
+			node := kdl.NewNode(ck)
+			val, err := kdl.TryNewValue(cv)
+			if err != nil {
+				return err
+			}
+			node.AddArgument(val)
+			pNode.AddChild(node)
+		}
 	}
-	doc := kdl.NewDocument(e, p)
+	doc := kdl.NewDocument(e, f)
 	return kdl.Encode(doc, w)
 }
 
@@ -84,8 +97,8 @@ type RunData struct {
 }
 
 type ModuleMeta struct {
-	Name      string
-	PathNames []string
+	Name  string
+	Flags []string
 }
 
 type Module interface {

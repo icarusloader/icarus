@@ -12,6 +12,7 @@ type Hooks struct {
 	WhenError   func(mn string, err error)
 	WhenLog     func(mn string, f string, msg string)
 	WhenSuccess func(mn string, f string, msg string)
+	WhenOther   func(mn string, f string, msg string)
 }
 
 type Config struct {
@@ -36,6 +37,7 @@ func ConfigFromKDL(r io.Reader) (*Config, error) {
 			}
 		case "flags":
 			for _, cNode := range node.Children().Nodes {
+				c.Flags[cNode.Name()] = map[string]any{}
 				for _, ccNode := range cNode.Children().Nodes {
 					if ccNode.Arg(0).Kind() == kdl.Bool {
 						c.Flags[cNode.Name()][ccNode.Name()] = ccNode.Arg(0).Bool()

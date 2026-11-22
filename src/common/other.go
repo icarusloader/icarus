@@ -2,7 +2,12 @@ package common
 
 import (
 	"errors"
+	"io"
 )
+
+func CloseInto(err *error, c io.Closer) {
+	*err = errors.Join(*err, c.Close())
+}
 
 type OrderedMods struct {
 	Order []ModEntry

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -19,20 +20,27 @@ import (
 
 var hooks = common.Hooks{
 	WhenError: func(mn string, err error) {
-		fmt.Fprintf(os.Stderr, "\x1b[0;97;41m - \x1b[0m An error has happened in module %s: %v\n", mn, err)
+		fmt.Fprintf(os.Stderr, "\x1b[0;90;41m - \x1b[0m An error has happened in module %s: %v\n", mn, err)
 	},
 	WhenLog: func(mn string, f string, msg string) {
 		if f == "" {
-			fmt.Printf("\x1b[0;97;43m ? \x1b[0m Log from %s: %s\n", mn, msg)
+			fmt.Printf("\x1b[0;90;43m ? \x1b[0m Log from %s: %s\n", mn, msg)
 		} else {
-			fmt.Printf("\x1b[0;97;43m ? \x1b[0m Log from %s: %s\n", mn, fmt.Sprintf(f, msg))
+			fmt.Printf("\x1b[0;90;43m ? \x1b[0m Log from %s: %s\n", mn, fmt.Sprintf(f, msg))
 		}
 	},
 	WhenSuccess: func(mn string, f string, msg string) {
 		if f == "" {
-			fmt.Fprintf(os.Stderr, "\x1b[0;97;42m + \x1b[0m Message in %s: %s\n", mn, msg)
+			fmt.Fprintf(os.Stderr, "\x1b[0;90;42m + \x1b[0m Message in %s: %s\n", mn, msg)
 		} else {
-			fmt.Fprintf(os.Stderr, "\x1b[0;97;42m + \x1b[0m Message in %s: %s\n", mn, fmt.Sprintf(f, msg))
+			fmt.Fprintf(os.Stderr, "\x1b[0;90;42m + \x1b[0m Message in %s: %s\n", mn, fmt.Sprintf(f, msg))
+		}
+	},
+	WhenOther: func(mn string, f string, msg string) {
+		if f == "" {
+			fmt.Fprintf(os.Stderr, "\x1b[0;90;44m ! \x1b[0m Message in %s: %s\n", mn, msg)
+		} else {
+			fmt.Fprintf(os.Stderr, "\x1b[0;90;44m ! \x1b[0m Message in %s: %s\n", mn, fmt.Sprintf(f, msg))
 		}
 	},
 }
@@ -40,7 +48,7 @@ var hooks = common.Hooks{
 func Main(args []string, modules []common.Module) {
 	ex, err := os.Executable()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "\x1b[0;90;41m - \x1b[0m Error: %v\n", err)
 		os.Exit(1)
 	}
 	here := filepath.Dir(ex)
@@ -85,7 +93,7 @@ func Main(args []string, modules []common.Module) {
 				if !ok {
 					return fmt.Errorf("unknown module %s", m)
 				}
-				hooks.WhenLog("cli", "Loaded module %s", m)
+				hooks.WhenLog("cli", "loaded module %s", m)
 			}
 			confPath := filepath.Join(here, "config.kdl")
 			confFile, err := os.Open(confPath)
@@ -95,6 +103,12 @@ func Main(args []string, modules []common.Module) {
 			conf, err := common.ConfigFromKDL(confFile)
 			if err != nil {
 				return err
+			}
+			enabled := make([]common.Module, 0, len(modules))
+			for _, m := range modules {
+				if slices.Contains(mNames, m.Meta().Name) {
+					enabled = append(enabled, m)
+				}
 			}
 			hooks.WhenLog("cli", "", "config found at config.kdl")
 			modsDir := filepath.Join(here, "mods")
@@ -137,7 +151,7 @@ func Main(args []string, modules []common.Module) {
 					Enabled: true,
 				})
 			}
-			b, err := core.Run(modules, ord, common.RunData{
+			b, err := core.Run(enabled, ord, common.RunData{
 				Config:    conf,
 				Context:   newCtx,
 				WaitGroup: &wg,
@@ -148,10 +162,13 @@ func Main(args []string, modules []common.Module) {
 			if err != nil {
 				return err
 			}
+			hooks.WhenSuccess("cli", "", fmt.Sprintf("successfully applied %d mod(s)", len(ord.Order)))
 			if block {
 				if !b {
-					hooks.WhenLog("cli", "", "No modules to block for")
+					hooks.WhenOther("cli", "", "no modules to block for")
+					return nil
 				}
+				hooks.WhenSuccess("cli", "", "blocking...")
 				c := make(chan os.Signal, 1)
 				signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 				<-c
@@ -164,7 +181,7 @@ func Main(args []string, modules []common.Module) {
 	}
 	err = cmd.Run(bg, args)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		// fmt.Fprintf(os.Stderr, "Error: %v\n", err) // the errors are printed anyway
 		os.Exit(1)
 	}
 }

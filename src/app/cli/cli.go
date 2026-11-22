@@ -2,9 +2,11 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"icarus/common"
 	"icarus/internal/core"
+	"io/fs"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -95,14 +97,33 @@ func Main(args []string, modules []common.Module) {
 				}
 				hooks.WhenLog("cli", "loaded module %s", m)
 			}
+			var conf *common.Config
 			confPath := filepath.Join(here, "config.kdl")
 			confFile, err := os.Open(confPath)
+			defer common.CloseInto(&err, confFile)
 			if err != nil {
-				return err
-			}
-			conf, err := common.ConfigFromKDL(confFile)
-			if err != nil {
-				return err
+				if errors.Is(err, fs.ErrNotExist) {
+					confFile, err = os.Create(confPath)
+					hooks.WhenOther("cli", "", "created config.kdl")
+					defer common.CloseInto(&err, confFile)
+					if err != nil {
+						return err
+					}
+					conf = &common.Config{
+						Enabled: []string{},
+						Flags:   map[string]map[string]any{},
+					}
+					if err = conf.ToKDL(confFile); err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
+			} else {
+				conf, err = common.ConfigFromKDL(confFile)
+				if err != nil {
+					return err
+				}
 			}
 			enabled := make([]common.Module, 0, len(modules))
 			for _, m := range modules {
@@ -114,7 +135,15 @@ func Main(args []string, modules []common.Module) {
 			modsDir := filepath.Join(here, "mods")
 			objs, err := os.ReadDir(modsDir)
 			if err != nil {
-				return err
+				if errors.Is(err, fs.ErrNotExist) {
+					if err = os.Mkdir(modsDir, 0o755); err != nil {
+						return err
+					}
+					hooks.WhenOther("cli", "", "created the mods folder, nothing else to do")
+					return nil
+				} else {
+					return err
+				}
 			}
 			avMods := map[string]common.ModPair{}
 			for _, obj := range objs {
@@ -122,6 +151,7 @@ func Main(args []string, modules []common.Module) {
 					modF := filepath.Join(modsDir, obj.Name())
 					meta := common.ModMeta{}
 					metaFile, err := os.Open(filepath.Join(modF, "meta.kdl"))
+					defer common.CloseInto(&err, metaFile)
 					if err != nil {
 						return err
 					}
@@ -160,7 +190,7 @@ func Main(args []string, modules []common.Module) {
 				Here:      here,
 			})
 			if err != nil {
-				return err
+				return nil
 			}
 			hooks.WhenSuccess("cli", "", fmt.Sprintf("successfully applied %d mod(s)", len(ord.Order)))
 			if block {
@@ -181,7 +211,7 @@ func Main(args []string, modules []common.Module) {
 	}
 	err = cmd.Run(bg, args)
 	if err != nil {
-		// fmt.Fprintf(os.Stderr, "Error: %v\n", err) // the errors are printed anyway
+		hooks.WhenError("cli", err) // i was wrong
 		os.Exit(1)
 	}
 }

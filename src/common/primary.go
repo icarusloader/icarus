@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"sync"
 
@@ -61,6 +62,7 @@ func (c *Config) ToKDL(w io.Writer) error {
 		pNode := kdl.NewNode(k)
 		for ck, cv := range v {
 			node := kdl.NewNode(ck)
+			fmt.Printf("%T %#v\n", cv, cv)
 			val, err := kdl.TryNewValue(cv)
 			if err != nil {
 				return err
@@ -70,7 +72,7 @@ func (c *Config) ToKDL(w io.Writer) error {
 		}
 	}
 	doc := kdl.NewDocument(e, f)
-	return kdl.Encode(doc, w)
+	return kdl.Emit(doc, w)
 }
 
 type ModMeta struct {

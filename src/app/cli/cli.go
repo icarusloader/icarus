@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"icarus/common"
-	"icarus/internal/core"
 	"io/fs"
 	"os"
 	"os/signal"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/icarusloader/icarus/common"
+	"github.com/icarusloader/icarus/internal/core"
 
 	"github.com/calico32/kdl-go"
 
@@ -57,6 +58,7 @@ func Main(args []string, modules []common.Module) {
 	bg := context.Background()
 	cmd := &cli.Command{
 		Name:        "icarus",
+		Version:     "0.2.0",
 		Usage:       "Modular modloader for Roblox",
 		Description: "A cross-platform and modular modloader written in Go for Roblox",
 		Flags: []cli.Flag{

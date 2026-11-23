@@ -3,3 +3,13 @@
 ![GitHub License](https://img.shields.io/github/license/icarusloader/icarus?color=8bd5ca) ![Discord](https://img.shields.io/discord/1386295493109481582?color=8bd5ca)
 
 icarusloader is a modular modloader written in Go for Roblox. It is built on the principle of everything in the source code being switchable, with a simple API for implementing your own modules and mods.
+
+## Installation
+
+The preffered method of installing it is building it yourself. To build it, you can run the following command from the root:
+
+```sh
+go build -o ./bin/ ./src/cmd/main/cli
+```
+
+If you don't have Go installed, you should be able to get a build from the Releases page in GitHub.

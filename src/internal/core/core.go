@@ -1,6 +1,6 @@
 package core
 
-import "icarus/common"
+import "github.com/icarusloader/icarus/common"
 
 func Run(ms []common.Module, OrderedMods *common.OrderedMods, rd common.RunData) (bool, error) {
 	entries := make(map[string][]common.ModEntry, len(ms))

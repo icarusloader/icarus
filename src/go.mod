@@ -1,4 +1,4 @@
-module icarus
+module github.com/icarusloader/icarus
 
 go 1.27.4
 

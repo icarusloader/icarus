@@ -3,7 +3,8 @@ package module
 
 import (
 	"errors"
-	"icarus/common"
+
+	"github.com/icarusloader/icarus/common"
 )
 
 type Module struct{}

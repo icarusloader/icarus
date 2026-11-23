@@ -12,4 +12,4 @@ The preffered method of installing it is building it yourself. To build it, you 
 go build -o ./bin/ ./src/cmd/main/cli
 ```
 
-If you don't have Go installed, you should be able to get a build from the Releases page in GitHub.
+If you don't have Go installed, you should be able to get a build from the Releases page in GitHub. Running the binary should generate the necessary folders for you where the binary is, so I recommend putting it in its own folder.

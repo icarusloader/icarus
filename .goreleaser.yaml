@@ -1,7 +1,10 @@
 version: 2
 
 builds:
-  - env:
+  - dir: src
+    main: ./cmd/main/cli
+    binary: icarus
+    env:
       - CGO_ENABLED=0
     goos: [linux, windows, darwin]
     goarch: [amd64, arm64]

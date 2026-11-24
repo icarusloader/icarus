@@ -1,0 +1,35 @@
+version: 2
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    include:
+      - '^\w+(\(.+\))?!:'
+      - '^feat(\(.+\))?:'
+      - '^fix(\(.+\))?:'
+  groups:
+    - title: "⚠️ Breaking changes"
+      regexp: '^\w+(\(.+\))?!:'
+      order: 0
+    - title: "Features"
+      regexp: '^feat(\(.+\))?:'
+      order: 1
+    - title: "Bug fixes"
+      regexp: '^fix(\(.+\))?:'
+      order: 2
